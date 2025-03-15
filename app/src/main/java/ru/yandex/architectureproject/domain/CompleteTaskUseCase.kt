@@ -1,20 +1,18 @@
 package ru.yandex.architectureproject.domain
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import ru.yandex.architectureproject.data.repository.TaskRepository
 
 class CompleteTaskUseCase(
     private val repository: TaskRepository,
 ) {
-    suspend operator fun invoke(taskId: Int, jobMap: MutableMap<Int, Job>) {
+    suspend operator fun invoke(taskId: Int) {
         repository.completeTask(taskId)
-        val scope = jobMap[taskId]?.let { CoroutineScope(it) }
-        scope?.launch {
-            delay(10_000L)
+            delay(DECISION_TIME)
             repository.deleteTask(taskId)
-        }
+    }
+
+    companion object {
+        private const val DECISION_TIME = 10_000L
     }
 }

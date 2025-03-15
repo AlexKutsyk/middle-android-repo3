@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ru.yandex.architectureproject.domain.AddTaskUseCase
@@ -19,6 +20,7 @@ import ru.yandex.architectureproject.domain.GetAllTasksUseCase
 import ru.yandex.architectureproject.domain.IncompleteTaskUseCase
 import ru.yandex.architectureproject.presentation.state.TaskAction
 import ru.yandex.architectureproject.presentation.state.TaskState
+import java.util.concurrent.ConcurrentHashMap
 
 class TaskViewModel(
     private val addTaskUseCase: AddTaskUseCase,
@@ -30,7 +32,7 @@ class TaskViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow<TaskState>(TaskState.Loading)
     val state: StateFlow<TaskState> = _state.asStateFlow()
-    private val jobMap : MutableMap<Int, Job> = mutableMapOf()
+    private val jobMap = ConcurrentHashMap<Int, Job>()
 
     init {
         reduce(TaskAction.LoadTasks)
@@ -44,10 +46,11 @@ class TaskViewModel(
                 TaskAction.LoadTasks -> loadTasks()
                 is TaskAction.UpdateTaskStatus -> {
                     if (action.isDone) {
-                        jobMap[action.taskId] = Job()
-                        completeTaskUseCase.invoke(action.taskId, jobMap)
+                        jobMap[action.taskId] = this.coroutineContext.job
+                        completeTaskUseCase.invoke(action.taskId)
                     } else {
-                        incompleteTaskUseCase.invoke(action.taskId, jobMap)
+                        jobMap.remove(action.taskId)?.cancel()
+                        incompleteTaskUseCase.invoke(action.taskId)
                     }
                 }
             }
