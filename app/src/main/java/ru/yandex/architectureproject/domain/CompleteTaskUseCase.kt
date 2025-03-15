@@ -9,7 +9,7 @@ import ru.yandex.architectureproject.data.repository.TaskRepository
 class CompleteTaskUseCase(
     private val repository: TaskRepository,
 ) {
-    suspend fun invoke(taskId: Int, jobMap: MutableMap<Int, Job>) {
+    suspend operator fun invoke(taskId: Int, jobMap: MutableMap<Int, Job>) {
         repository.completeTask(taskId)
         val scope = jobMap[taskId]?.let { CoroutineScope(it) }
         scope?.launch {
