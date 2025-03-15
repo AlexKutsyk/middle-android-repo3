@@ -3,6 +3,7 @@ package ru.yandex.architectureproject.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,13 +30,28 @@ class TaskViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow<TaskState>(TaskState.Loading)
     val state: StateFlow<TaskState> = _state.asStateFlow()
+    private val jobMap : MutableMap<Int, Job> = mutableMapOf()
 
     init {
         reduce(TaskAction.LoadTasks)
     }
 
     fun reduce(action: TaskAction) {
-        // TODO: Здесь должна быть обработка действий
+        viewModelScope.launch {
+            when (action) {
+                is TaskAction.AddTask -> addTaskUseCase.invoke(action.taskText)
+                is TaskAction.DeleteTask -> deleteTaskUseCase.invoke(action.taskId)
+                TaskAction.LoadTasks -> loadTasks()
+                is TaskAction.UpdateTaskStatus -> {
+                    if (action.isDone) {
+                        jobMap[action.taskId] = Job()
+                        completeTaskUseCase.invoke(action.taskId, jobMap)
+                    } else {
+                        incompleteTaskUseCase.invoke(action.taskId, jobMap)
+                    }
+                }
+            }
+        }
     }
 
     private suspend fun loadTasks() {
