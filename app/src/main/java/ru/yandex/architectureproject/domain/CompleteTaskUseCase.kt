@@ -1,5 +1,6 @@
 package ru.yandex.architectureproject.domain
 
+import kotlinx.coroutines.delay
 import ru.yandex.architectureproject.data.repository.TaskRepository
 
 class CompleteTaskUseCase(
@@ -7,6 +8,11 @@ class CompleteTaskUseCase(
 ) {
     suspend operator fun invoke(taskId: Int) {
         repository.completeTask(taskId)
-        // TODO: Здесь будет автоудаление задачи
+            delay(DECISION_TIME)
+            repository.deleteTask(taskId)
+    }
+
+    companion object {
+        private const val DECISION_TIME = 10_000L
     }
 }
